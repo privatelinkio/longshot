@@ -702,9 +702,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       const rect = selectedElement.getBoundingClientRect();
-      // Calculate element's position on the page (absolute, not viewport-relative)
-      const elementPageTop = rect.top + window.scrollY;
-      const elementPageLeft = rect.left + window.scrollX;
+      // Calculate element's position relative to the scroll container
+      // Use the same scroll container that scrollToPosition uses
+      const scrollable = findScrollableElement();
+      const scrollTop = scrollable ? scrollable.scrollTop : window.scrollY;
+      const scrollLeft = scrollable ? scrollable.scrollLeft : window.scrollX;
+      const elementPageTop = rect.top + scrollTop;
+      const elementPageLeft = rect.left + scrollLeft;
 
       const dims = {
         scrollHeight: selectedElement.scrollHeight,

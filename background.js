@@ -365,10 +365,11 @@ async function elementCapture(tabId, elementInfo, sessionId) {
     const hasInternalScroll = elementScrollHeight > elementClientHeight + 10;
     const elementTotalHeight = hasInternalScroll ? elementScrollHeight : boundingRect.height;
 
-    // For page scroll, we need to know how much of the element is visible
-    // and calculate captures based on visible portions
-    const visibleHeight = Math.min(boundingRect.height, viewportHeight);
-    const captureHeight = hasInternalScroll ? elementClientHeight : visibleHeight;
+    // For page scroll, the visible height is the viewport height MINUS the element's Y position
+    // (to account for any fixed headers above the element)
+    // For internal scroll, it's the element's client height
+    const visibleHeightForPageScroll = viewportHeight - boundingRect.y;
+    const captureHeight = hasInternalScroll ? elementClientHeight : visibleHeightForPageScroll;
 
     log(`Capture strategy: ${hasInternalScroll ? 'ELEMENT_SCROLL' : 'PAGE_SCROLL'}`);
     log(`Element total height: ${elementTotalHeight}, capture height per viewport: ${captureHeight}`);
@@ -424,10 +425,25 @@ async function elementCapture(tabId, elementInfo, sessionId) {
         log(`Capture ${i + 1}: Element scroll confirmed at Y=${scrollResult.scrolledToY}`);
       } else {
         // Scroll the page to reveal different parts of the element
-        // First, we need to scroll the element into view at the right position
         const elementTopOnPage = dims.elementPageTop || 0;
-        const scrollY = elementTopOnPage + (i * (captureHeight - OVERLAP_HEIGHT));
-        log(`Capture ${i + 1}/${numCaptures}: Scrolling page to Y=${scrollY}`);
+        const elementNaturalY = boundingRect.y; // Element's Y position before any scrolling
+
+        // For the FIRST capture, don't scroll - keep the element at its natural position
+        // below any fixed headers. For subsequent captures, scroll to reveal more content
+        // while keeping the element in the same vertical position (below fixed headers).
+        let scrollY;
+        if (i === 0) {
+          // First capture: don't scroll, element at natural position
+          scrollY = 0;
+          log(`Capture ${i + 1}/${numCaptures}: First capture - not scrolling, element at y=${elementNaturalY}`);
+        } else {
+          // Subsequent captures: scroll to reveal more of the element
+          // The visible height per capture (accounting for element's natural position)
+          const visibleHeightPerCapture = viewportHeight - elementNaturalY;
+          // Scroll amount for this capture
+          scrollY = i * (visibleHeightPerCapture - OVERLAP_HEIGHT);
+          log(`Capture ${i + 1}/${numCaptures}: Scrolling page to Y=${scrollY} (visible height: ${visibleHeightPerCapture})`);
+        }
 
         const scrollResult = await chrome.tabs.sendMessage(tabId, {
           type: 'SCROLL_TO',

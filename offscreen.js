@@ -188,8 +188,9 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
         viewportWidth: Math.round(captures[i].viewportWidth * devicePixelRatio),
         scrollY: Math.round(captures[i].scrollY * devicePixelRatio),
         // For page scroll mode, each capture may have different offsets
-        offsetX: Math.round((rect.x || elementBounds.offsetX) * devicePixelRatio),
-        offsetY: Math.round((rect.y || elementBounds.offsetY) * devicePixelRatio),
+        // Use explicit null/undefined check since 0 is a valid value
+        offsetX: Math.round((rect.x !== undefined ? rect.x : elementBounds.offsetX) * devicePixelRatio),
+        offsetY: Math.round((rect.y !== undefined ? rect.y : elementBounds.offsetY) * devicePixelRatio),
         captureHeight: Math.round((rect.height || elementBounds.height) * devicePixelRatio),
         isLastCapture: captures[i].isLastCapture
       });
@@ -202,16 +203,27 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
         const image = images[i];
         // Element row visible at top of this capture
         // If offsetY is negative, element is above viewport, so we're seeing rows from -offsetY
+        // If offsetY is positive, element starts below viewport top, so we see from row 0
         image.elementRowStart = Math.max(0, -image.offsetY);
+
         // Element row visible at bottom of this capture
-        image.elementRowEnd = image.elementRowStart + Math.min(image.img.height, image.captureHeight + image.offsetY);
+        // The visible element height in the screenshot is: img.height - max(0, offsetY)
+        // (subtract the space above the element if it's below viewport top)
+        const visibleElementHeight = image.img.height - Math.max(0, image.offsetY);
+        image.elementRowEnd = image.elementRowStart + visibleElementHeight;
+
+        // Cap at total element height (scaled)
+        image.elementRowEnd = Math.min(image.elementRowEnd, scaledTotalHeight);
+
         log(`Capture ${i + 1}: shows element rows ${image.elementRowStart} to ${image.elementRowEnd}`);
       }
     }
 
     // Detect sticky header by comparing first two captures
+    // Only for INTERNAL_SCROLL mode - for PAGE_SCROLL, we handle fixed headers
+    // by keeping the element at its natural position on the first capture
     let stickyHeaderHeight = 0;
-    if (images.length >= 2 && !hasInternalScroll) {
+    if (images.length >= 2 && hasInternalScroll) {
       const firstImg = images[0];
       const secondImg = images[1];
       // Compare top 200px (scaled) to detect sticky headers
