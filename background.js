@@ -398,6 +398,16 @@ async function elementCapture(tabId, elementInfo, sessionId) {
       const progress = Math.round((i / numCaptures) * 100);
       updateCaptureState(sessionId, 'capturing', `Capturing viewport ${i + 1}/${numCaptures}...`, progress);
 
+      // Hide fixed/sticky elements after first capture to avoid duplicates
+      if (i === 1 && numCaptures > 1) {
+        log('Hiding fixed/sticky elements for subsequent captures');
+        try {
+          await chrome.tabs.sendMessage(tabId, { type: 'HIDE_FIXED_ELEMENTS' });
+        } catch (e) {
+          log('Warning: Could not hide fixed elements:', e.message);
+        }
+      }
+
       if (hasInternalScroll) {
         // Scroll within the element
         const scrollY = i * (captureHeight - OVERLAP_HEIGHT);
@@ -480,6 +490,16 @@ async function elementCapture(tabId, elementInfo, sessionId) {
       });
 
       log(`Capture ${i + 1}: Stored (size: ${blob.size} bytes)`);
+    }
+
+    // Restore fixed elements after all captures
+    if (numCaptures > 1) {
+      log('Restoring fixed/sticky elements');
+      try {
+        await chrome.tabs.sendMessage(tabId, { type: 'RESTORE_FIXED_ELEMENTS' });
+      } catch (e) {
+        log('Warning: Could not restore fixed elements:', e.message);
+      }
     }
 
     if (captures.length === 0) {

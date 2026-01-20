@@ -373,6 +373,88 @@ let highlightBox = null;
 let selectedElement = null;
 
 /**
+ * Sticky/Fixed element handling for clean captures
+ */
+let hiddenFixedElements = [];
+
+/**
+ * Find all fixed/sticky positioned elements on the page
+ * Only targets elements that directly have position:fixed or position:sticky
+ */
+function findFixedElements() {
+  const fixed = [];
+  const seen = new Set();
+  const all = document.querySelectorAll('*');
+
+  for (const el of all) {
+    // Skip our own overlay elements
+    if (el.id && el.id.startsWith('longshot-')) continue;
+    if (seen.has(el)) continue;
+
+    const style = getComputedStyle(el);
+
+    // Skip invisible elements
+    if (style.display === 'none' || style.visibility === 'hidden' ||
+        el.offsetWidth === 0 || el.offsetHeight === 0) {
+      continue;
+    }
+
+    // Only target elements that directly have position:fixed or position:sticky
+    if (style.position === 'fixed' || style.position === 'sticky') {
+      // Skip if an ancestor is already in our list (avoid hiding nested elements separately)
+      let ancestorAlreadyHidden = false;
+      let parent = el.parentElement;
+      while (parent) {
+        if (seen.has(parent)) {
+          ancestorAlreadyHidden = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+
+      if (!ancestorAlreadyHidden) {
+        fixed.push({
+          element: el,
+          originalDisplay: el.style.display
+        });
+        seen.add(el);
+        log(`Found fixed/sticky element: ${el.tagName}.${el.className}, position: ${style.position}`);
+      }
+    }
+  }
+
+  log(`Found ${fixed.length} fixed/sticky elements to hide`);
+  return fixed;
+}
+
+/**
+ * Hide all fixed/sticky elements (for captures after the first)
+ */
+function hideFixedElements() {
+  if (hiddenFixedElements.length === 0) {
+    hiddenFixedElements = findFixedElements();
+  }
+
+  for (const item of hiddenFixedElements) {
+    item.element.style.display = 'none';
+  }
+
+  log(`Hidden ${hiddenFixedElements.length} fixed elements with display:none`);
+}
+
+/**
+ * Restore all fixed/sticky elements
+ */
+function restoreFixedElements() {
+  for (const item of hiddenFixedElements) {
+    item.element.style.display = item.originalDisplay || '';
+  }
+
+  log(`Restored ${hiddenFixedElements.length} fixed elements from display:none`);
+  hiddenFixedElements = [];
+}
+
+/**
  * Show element selector UI
  * Creates overlay and highlight box for element selection
  */
@@ -691,6 +773,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
     } catch (e) {
       error('Failed to cleanup element selector:', e);
+      sendResponse({ success: false, error: e.message });
+    }
+    return true;
+  }
+
+  // HIDE_FIXED_ELEMENTS: Hide sticky/fixed headers for clean captures
+  if (message.type === 'HIDE_FIXED_ELEMENTS') {
+    log('Received HIDE_FIXED_ELEMENTS request');
+    try {
+      hideFixedElements();
+      sendResponse({ success: true });
+    } catch (e) {
+      error('Failed to hide fixed elements:', e);
+      sendResponse({ success: false, error: e.message });
+    }
+    return true;
+  }
+
+  // RESTORE_FIXED_ELEMENTS: Restore sticky/fixed elements after capture
+  if (message.type === 'RESTORE_FIXED_ELEMENTS') {
+    log('Received RESTORE_FIXED_ELEMENTS request');
+    try {
+      restoreFixedElements();
+      sendResponse({ success: true });
+    } catch (e) {
+      error('Failed to restore fixed elements:', e);
       sendResponse({ success: false, error: e.message });
     }
     return true;
