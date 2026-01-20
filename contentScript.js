@@ -1,9 +1,9 @@
 /**
  * Content Script
- * Handles DOM stabilization and pre-capture interactions
+ * Handles DOM stabilization and scroll capture for full-page screenshots
  */
 
-const DEBUG = false;
+const DEBUG = true;
 
 function log(...args) {
   if (DEBUG) console.log('[ContentScript]', ...args);
@@ -11,6 +11,115 @@ function log(...args) {
 
 function error(...args) {
   console.error('[ContentScript]', ...args);
+}
+
+// Cache the scrollable element once found
+let cachedScrollableElement = null;
+
+/**
+ * Find the main scrollable element on the page
+ * Returns window if the document itself is scrollable, otherwise finds the scrollable container
+ */
+function findScrollableElement() {
+  // Check if we already found it
+  if (cachedScrollableElement) {
+    return cachedScrollableElement;
+  }
+
+  // First, check if the main document is scrollable
+  const docScrollable = document.documentElement.scrollHeight > document.documentElement.clientHeight + 10;
+
+  if (docScrollable) {
+    log('Main document is scrollable');
+    cachedScrollableElement = null; // null means use window
+    return null;
+  }
+
+  // Document isn't scrollable - find the scrollable container
+  log('Main document not scrollable, searching for scrollable container...');
+
+  // Find all elements with overflow scroll/auto that have scrollable content
+  const allElements = document.querySelectorAll('*');
+  let bestMatch = null;
+  let bestScrollHeight = 0;
+
+  for (const el of allElements) {
+    const style = getComputedStyle(el);
+    const overflowY = style.overflowY;
+    const overflow = style.overflow;
+
+    const hasScrollOverflow = overflowY === 'auto' || overflowY === 'scroll' ||
+                               overflow === 'auto' || overflow === 'scroll';
+
+    if (hasScrollOverflow && el.scrollHeight > el.clientHeight + 10) {
+      // Prefer larger scrollable areas (more content)
+      if (el.scrollHeight > bestScrollHeight) {
+        bestScrollHeight = el.scrollHeight;
+        bestMatch = el;
+      }
+    }
+  }
+
+  if (bestMatch) {
+    log('Found scrollable container:', {
+      tag: bestMatch.tagName,
+      class: bestMatch.className,
+      id: bestMatch.id,
+      scrollHeight: bestMatch.scrollHeight,
+      clientHeight: bestMatch.clientHeight
+    });
+    cachedScrollableElement = bestMatch;
+    return bestMatch;
+  }
+
+  log('No scrollable container found, falling back to window');
+  return null;
+}
+
+/**
+ * Get scroll dimensions from the appropriate element
+ */
+function getScrollDimensions(element) {
+  if (element === null) {
+    // Use window/document
+    return {
+      scrollHeight: document.documentElement.scrollHeight,
+      scrollWidth: document.documentElement.scrollWidth,
+      clientHeight: window.innerHeight,
+      clientWidth: window.innerWidth,
+      scrollTop: window.scrollY,
+      scrollLeft: window.scrollX
+    };
+  } else {
+    // Use the element
+    return {
+      scrollHeight: element.scrollHeight,
+      scrollWidth: element.scrollWidth,
+      clientHeight: element.clientHeight,
+      clientWidth: element.clientWidth,
+      scrollTop: element.scrollTop,
+      scrollLeft: element.scrollLeft
+    };
+  }
+}
+
+/**
+ * Scroll the appropriate element to a position
+ */
+function scrollElement(element, x, y) {
+  if (element === null) {
+    window.scrollTo(x, y);
+    return {
+      scrolledToX: window.scrollX,
+      scrolledToY: window.scrollY
+    };
+  } else {
+    element.scrollTo(x, y);
+    return {
+      scrolledToX: element.scrollLeft,
+      scrolledToY: element.scrollTop
+    };
+  }
 }
 
 /**
@@ -70,19 +179,18 @@ async function expandElements() {
  */
 async function scrollToBottom(maxDuration = 10000) {
   log('Starting scroll to bottom');
+  const scrollable = findScrollableElement();
   const startTime = Date.now();
-  const originalHeight = document.documentElement.scrollHeight;
-  let lastHeight = originalHeight;
+  let lastHeight = getScrollDimensions(scrollable).scrollHeight;
   let stableCount = 0;
-  const stabilityThreshold = 3; // Require 3 stable measurements
+  const stabilityThreshold = 3;
 
   while (Date.now() - startTime < maxDuration && stableCount < stabilityThreshold) {
-    // Scroll to bottom
-    window.scrollTo(0, document.documentElement.scrollHeight);
+    const dims = getScrollDimensions(scrollable);
+    scrollElement(scrollable, 0, dims.scrollHeight);
     await new Promise(r => setTimeout(r, 300));
 
-    // Check if height changed
-    const newHeight = document.documentElement.scrollHeight;
+    const newHeight = getScrollDimensions(scrollable).scrollHeight;
     if (newHeight === lastHeight) {
       stableCount++;
       log('Page height stable:', stableCount);
@@ -92,12 +200,11 @@ async function scrollToBottom(maxDuration = 10000) {
       lastHeight = newHeight;
     }
 
-    // Yield to UI
     await new Promise(r => setTimeout(r, 100));
   }
 
   // Scroll back to top
-  window.scrollTo(0, 0);
+  scrollElement(scrollable, 0, 0);
   log('Scroll complete, final height:', lastHeight);
 }
 
@@ -106,15 +213,15 @@ async function scrollToBottom(maxDuration = 10000) {
  */
 async function checkDomStability(duration = 2000) {
   log('Checking DOM stability');
+  const scrollable = findScrollableElement();
   const startTime = Date.now();
   const measurements = [];
 
   while (Date.now() - startTime < duration) {
-    measurements.push(document.documentElement.scrollHeight);
+    measurements.push(getScrollDimensions(scrollable).scrollHeight);
     await new Promise(r => setTimeout(r, 100));
   }
 
-  // Check if measurements are stable (within 10 pixels)
   const firstMeasurement = measurements[0];
   const isStable = measurements.every(m => Math.abs(m - firstMeasurement) < 10);
 
@@ -130,16 +237,13 @@ async function performDomStabilization(maxDuration) {
     log('Starting DOM stabilization with max duration:', maxDuration);
     const startTime = Date.now();
 
-    // Expand elements first
     await expandElements();
 
-    // Scroll to load lazy content
     const remainingTime = maxDuration - (Date.now() - startTime);
     if (remainingTime > 1000) {
       await scrollToBottom(Math.min(remainingTime, 5000));
     }
 
-    // Check stability
     await checkDomStability(1000);
 
     const elapsed = Date.now() - startTime;
@@ -154,15 +258,37 @@ async function performDomStabilization(maxDuration) {
  * Get page dimensions for scroll capture
  */
 function getPageDimensions() {
+  // Reset cache to re-detect scrollable element
+  cachedScrollableElement = null;
+
+  const scrollable = findScrollableElement();
+  const dims = getScrollDimensions(scrollable);
+
+  // Determine if we're using a custom container
+  const useCustomContainer = scrollable !== null;
+
   return {
-    scrollHeight: document.documentElement.scrollHeight,
-    scrollWidth: document.documentElement.scrollWidth,
-    viewportHeight: window.innerHeight,
-    viewportWidth: window.innerWidth,
-    currentScrollY: window.scrollY,
-    currentScrollX: window.scrollX,
-    devicePixelRatio: window.devicePixelRatio || 1
+    scrollHeight: dims.scrollHeight,
+    scrollWidth: dims.scrollWidth,
+    viewportHeight: dims.clientHeight,
+    viewportWidth: dims.clientWidth,
+    currentScrollY: dims.scrollTop,
+    currentScrollX: dims.scrollLeft,
+    devicePixelRatio: window.devicePixelRatio || 1,
+    useCustomContainer: useCustomContainer,
+    containerSelector: useCustomContainer ? describeElement(scrollable) : null
   };
+}
+
+/**
+ * Create a selector description for an element (for debugging)
+ */
+function describeElement(el) {
+  if (!el) return null;
+  let desc = el.tagName.toLowerCase();
+  if (el.id) desc += '#' + el.id;
+  if (el.className) desc += '.' + el.className.split(' ')[0];
+  return desc;
 }
 
 /**
@@ -170,12 +296,16 @@ function getPageDimensions() {
  */
 function scrollToPosition(x, y) {
   return new Promise((resolve) => {
-    window.scrollTo(x, y);
-    // Wait for scroll to settle (allows render and event processing)
+    const scrollable = findScrollableElement();
+    const result = scrollElement(scrollable, x, y);
+
+    // Wait for scroll to settle
     setTimeout(() => {
+      // Re-read actual position after settling
+      const dims = getScrollDimensions(scrollable);
       resolve({
-        scrolledToX: window.scrollX,
-        scrolledToY: window.scrollY
+        scrolledToX: dims.scrollLeft,
+        scrolledToY: dims.scrollTop
       });
     }, 150);
   });
@@ -203,7 +333,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: e.message });
       });
 
-    return true; // Will respond asynchronously
+    return true;
   }
 
   if (message.type === 'SCROLL_CAPTURE_INIT') {
@@ -230,7 +360,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         error('Failed to scroll:', e);
         sendResponse({ success: false, error: e.message });
       });
-    return true; // Will respond asynchronously
+    return true;
   }
 });
 
