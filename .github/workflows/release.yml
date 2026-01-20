@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -69,14 +71,32 @@ jobs:
         if: steps.check_secret.outputs.has_key == 'true'
         run: npm install -g crx
 
-      - name: Create CRX file
+      - name: Create CRX file and get Extension ID
+        id: crx
         if: steps.check_secret.outputs.has_key == 'true'
         env:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+
           # Write the private key from secret
           echo "$CRX_PRIVATE_KEY" > longshot.pem
+
+          # Extract public key and compute extension ID
+          # Extension ID is first 32 chars of SHA256 of public key, with a-p alphabet
+          EXTENSION_ID=$(openssl rsa -in longshot.pem -pubout -outform DER 2>/dev/null | \
+            openssl dgst -sha256 -binary | \
+            head -c 16 | \
+            xxd -p | \
+            sed 's/./\n&/g' | \
+            tail -n +2 | \
+            while read -r char; do
+              dec=$((16#$char))
+              printf "\\$(printf '%03o' $((dec + 97)))"
+            done)
+
+          echo "Extension ID: $EXTENSION_ID"
+          echo "extension_id=$EXTENSION_ID" >> $GITHUB_OUTPUT
 
           # Create a temporary directory with extension files
           mkdir -p extension
@@ -91,6 +111,25 @@ jobs:
           rm -rf extension
 
           ls -la *.crx
+
+      - name: Update updates.xml
+        if: steps.check_secret.outputs.has_key == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          EXTENSION_ID="${{ steps.crx.outputs.extension_id }}"
+          CRX_URL="https://github.com/langstons/longshot/releases/download/v${VERSION}/longshot-${VERSION}.crx"
+
+          cat > updates.xml << EOF
+          <?xml version='1.0' encoding='UTF-8'?>
+          <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
+            <app appid='${EXTENSION_ID}'>
+              <updatecheck codebase='${CRX_URL}' version='${VERSION}' />
+            </app>
+          </gupdate>
+          EOF
+
+          echo "Updated updates.xml:"
+          cat updates.xml
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -120,8 +159,33 @@ jobs:
             4. Enable "Developer mode"
             5. Click "Load unpacked" and select the extracted folder
 
-            **Enterprise Deployment (CRX)**:
-            - Download `longshot-${{ steps.version.outputs.version }}.crx`
-            - Deploy via enterprise policy (ExtensionInstallForcelist)
+            **Enterprise Deployment (CRX with Auto-Update)**:
+            - Deploy `longshot-${{ steps.version.outputs.version }}.crx` via enterprise policy
+            - Auto-updates via: `https://langstons.github.io/longshot/updates.xml`
+            - Extension ID: `${{ steps.crx.outputs.extension_id }}`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare GitHub Pages
+        if: steps.check_secret.outputs.has_key == 'true'
+        run: |
+          mkdir -p _site
+          cp updates.xml _site/
+
+      - name: Upload Pages artifact
+        if: steps.check_secret.outputs.has_key == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy-pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
