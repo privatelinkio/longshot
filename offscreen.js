@@ -81,6 +81,71 @@ function loadImageFromDataUrl(dataUrl) {
 }
 
 /**
+ * Detect sticky header height by comparing top pixels of two captures
+ * Returns the height of the duplicate region (sticky header), or 0 if none found
+ */
+function detectStickyHeaderHeight(img1, img2, offsetX, maxHeight, width) {
+  try {
+    // Create canvases to extract pixel data
+    const canvas1 = new OffscreenCanvas(width, maxHeight);
+    const canvas2 = new OffscreenCanvas(width, maxHeight);
+    const ctx1 = canvas1.getContext('2d');
+    const ctx2 = canvas2.getContext('2d');
+
+    if (!ctx1 || !ctx2) return 0;
+
+    // Draw the cropped regions from both images
+    ctx1.drawImage(img1, offsetX, 0, width, maxHeight, 0, 0, width, maxHeight);
+    ctx2.drawImage(img2, offsetX, 0, width, maxHeight, 0, 0, width, maxHeight);
+
+    // Get pixel data
+    const data1 = ctx1.getImageData(0, 0, width, maxHeight).data;
+    const data2 = ctx2.getImageData(0, 0, width, maxHeight).data;
+
+    // Compare row by row to find where they start to differ
+    const rowBytes = width * 4; // 4 bytes per pixel (RGBA)
+    let stickyHeight = 0;
+
+    for (let row = 0; row < maxHeight; row++) {
+      const rowStart = row * rowBytes;
+      let rowMatches = true;
+      let diffCount = 0;
+
+      // Compare this row's pixels
+      for (let i = 0; i < rowBytes; i += 4) {
+        const idx = rowStart + i;
+        // Allow small differences (anti-aliasing, compression artifacts)
+        const diff = Math.abs(data1[idx] - data2[idx]) +
+                     Math.abs(data1[idx + 1] - data2[idx + 1]) +
+                     Math.abs(data1[idx + 2] - data2[idx + 2]);
+        if (diff > 30) { // Threshold for "different"
+          diffCount++;
+        }
+      }
+
+      // If more than 5% of pixels differ, rows don't match
+      if (diffCount > (width * 0.05)) {
+        break;
+      }
+
+      stickyHeight = row + 1;
+    }
+
+    // Only return if we found a meaningful sticky header (at least 20px)
+    // and it's not the entire comparison region
+    if (stickyHeight >= 20 && stickyHeight < maxHeight - 20) {
+      log(`Detected sticky header height: ${stickyHeight}px`);
+      return stickyHeight;
+    }
+
+    return 0;
+  } catch (e) {
+    error('Failed to detect sticky header:', e);
+    return 0;
+  }
+}
+
+/**
  * Stitch element captures with cropping
  *
  * @param {Array} captures - Array of {dataUrl, viewportHeight, viewportWidth, scrollY, boundingRect, isLastCapture}
@@ -130,6 +195,39 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
       });
     }
 
+    // For PAGE_SCROLL mode, calculate which element rows each capture covers
+    // This is more accurate than using fixed overlap
+    if (!hasInternalScroll) {
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        // Element row visible at top of this capture
+        // If offsetY is negative, element is above viewport, so we're seeing rows from -offsetY
+        image.elementRowStart = Math.max(0, -image.offsetY);
+        // Element row visible at bottom of this capture
+        image.elementRowEnd = image.elementRowStart + Math.min(image.img.height, image.captureHeight + image.offsetY);
+        log(`Capture ${i + 1}: shows element rows ${image.elementRowStart} to ${image.elementRowEnd}`);
+      }
+    }
+
+    // Detect sticky header by comparing first two captures
+    let stickyHeaderHeight = 0;
+    if (images.length >= 2 && !hasInternalScroll) {
+      const firstImg = images[0];
+      const secondImg = images[1];
+      // Compare top 200px (scaled) to detect sticky headers
+      const maxCompareHeight = Math.min(200 * devicePixelRatio, firstImg.img.height / 2);
+      stickyHeaderHeight = detectStickyHeaderHeight(
+        firstImg.img,
+        secondImg.img,
+        firstImg.offsetX,
+        maxCompareHeight,
+        scaledWidth
+      );
+      if (stickyHeaderHeight > 0) {
+        log(`Detected sticky header: ${stickyHeaderHeight}px`);
+      }
+    }
+
     // Calculate output canvas size
     const outputWidth = sanitizeCanvasDimension(scaledWidth, 800);
     const outputHeight = sanitizeCanvasDimension(scaledTotalHeight, 600);
@@ -147,6 +245,7 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
 
     // Draw strategy depends on scroll mode
     let currentDestY = 0;
+    let elementRowDrawnUpTo = 0; // Track which element rows we've drawn
 
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
@@ -158,24 +257,32 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
 
       if (hasInternalScroll) {
         // Internal scroll: element stays in same position, content scrolls inside
-        // Each capture shows different content at the same viewport position
         srcY = isFirstCapture ? image.offsetY : image.offsetY + scaledOverlapHeight;
         srcHeight = isFirstCapture ? image.captureHeight : image.captureHeight - scaledOverlapHeight;
       } else {
-        // Page scroll: element moves in viewport as page scrolls
-        // The visible portion of the element is at different Y positions
-        // For page scroll, offsetY might be negative (element partially above viewport)
-        // or positive (element below top of viewport)
-        srcY = Math.max(0, image.offsetY);
-        const visibleTop = Math.max(0, -image.offsetY); // How much of element is above viewport
-        const visibleBottom = Math.min(image.captureHeight, image.img.height - image.offsetY);
-        srcHeight = Math.min(image.captureHeight, image.img.height - srcY);
+        // Page scroll: use element row tracking for accurate stitching
+        const elementRowStart = image.elementRowStart;
+        const elementRowEnd = image.elementRowEnd;
 
-        // Adjust for overlap on non-first captures
-        if (!isFirstCapture) {
-          srcY += scaledOverlapHeight;
-          srcHeight -= scaledOverlapHeight;
+        // How many rows at the start of this capture overlap with what we've already drawn?
+        const overlapRows = Math.max(0, elementRowDrawnUpTo - elementRowStart);
+
+        // In the screenshot, the element starts at max(0, offsetY)
+        // We need to skip 'overlapRows' of element content
+        srcY = Math.max(0, image.offsetY) + overlapRows;
+
+        // Also skip sticky header on non-first captures
+        if (!isFirstCapture && stickyHeaderHeight > 0) {
+          srcY += stickyHeaderHeight;
         }
+
+        // Calculate how much height to draw
+        srcHeight = image.img.height - srcY;
+
+        // Update tracking
+        elementRowDrawnUpTo = Math.max(elementRowDrawnUpTo, elementRowEnd);
+
+        log(`Capture ${i + 1}: overlap=${overlapRows}px, stickySkip=${isFirstCapture ? 0 : stickyHeaderHeight}px`);
       }
 
       // Clamp source dimensions to image bounds
@@ -189,19 +296,6 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
 
       log(`Drawing capture ${i + 1}: src(${srcX}, ${srcY}, ${srcWidth}x${srcHeight}) -> dest(0, ${currentDestY})`);
 
-      // Draw with overlap blending for non-first captures
-      if (!isFirstCapture && scaledOverlapHeight > 0) {
-        ctx.globalAlpha = 0.5;
-        ctx.drawImage(
-          image.img,
-          srcX, srcY - scaledOverlapHeight, srcWidth, scaledOverlapHeight,
-          0, currentDestY, srcWidth, scaledOverlapHeight
-        );
-        ctx.globalAlpha = 1.0;
-        currentDestY += scaledOverlapHeight;
-      }
-
-      // Draw main content
       ctx.drawImage(
         image.img,
         srcX, srcY, srcWidth, srcHeight,
@@ -209,6 +303,19 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
       );
 
       currentDestY += srcHeight;
+    }
+
+    // Trim canvas to actual content drawn
+    if (currentDestY < outputHeight) {
+      log(`Trimming canvas from ${outputHeight} to ${currentDestY}`);
+      const trimmedCanvas = new OffscreenCanvas(outputWidth, currentDestY);
+      const trimmedCtx = trimmedCanvas.getContext('2d');
+      trimmedCtx.drawImage(outputCanvas, 0, 0);
+
+      log('Element stitching complete, converting to PNG...');
+      const blob = await trimmedCanvas.convertToBlob({ type: 'image/png' });
+      log(`Stitched element PNG created: ${blob.size} bytes`);
+      return blob;
     }
 
     log('Element stitching complete, converting to PNG...');
