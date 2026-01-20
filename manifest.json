@@ -3,6 +3,7 @@
   "name": "Longshot",
   "version": "1.1.0",
   "description": "Capture full-page screenshots using scroll-and-stitch method",
+  "update_url": "https://langstons.github.io/longshot/updates.xml",
   "permissions": [
     "activeTab",
     "tabs",
