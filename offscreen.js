@@ -83,8 +83,8 @@ function loadImageFromDataUrl(dataUrl) {
 /**
  * Stitch element captures with cropping
  *
- * @param {Array} captures - Array of {dataUrl, viewportHeight, viewportWidth, scrollY, isLastCapture}
- * @param {Object} elementBounds - {width, height, offsetX, offsetY, devicePixelRatio}
+ * @param {Array} captures - Array of {dataUrl, viewportHeight, viewportWidth, scrollY, boundingRect, isLastCapture}
+ * @param {Object} elementBounds - {width, height, offsetX, offsetY, devicePixelRatio, hasInternalScroll}
  * @param {number} overlapHeight - Overlap in pixels between captures
  * @returns {Promise<Blob>} PNG blob of stitched element
  */
@@ -97,44 +97,42 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
       throw new Error('No captures to stitch');
     }
 
-    const { width, height, offsetX, offsetY, devicePixelRatio } = elementBounds;
+    const { width, height, devicePixelRatio, hasInternalScroll } = elementBounds;
 
     // Scale coordinates by device pixel ratio
-    const scaledWidth = width * devicePixelRatio;
-    const scaledHeight = height * devicePixelRatio;
-    const scaledOffsetX = offsetX * devicePixelRatio;
-    const scaledOffsetY = offsetY * devicePixelRatio;
+    const scaledWidth = Math.round(width * devicePixelRatio);
+    const scaledTotalHeight = Math.round(height * devicePixelRatio);
+    const scaledOverlapHeight = Math.round(overlapHeight * devicePixelRatio);
 
-    log(`Scaled dimensions: ${scaledWidth}x${scaledHeight}, offset: (${scaledOffsetX}, ${scaledOffsetY})`);
+    log(`Mode: ${hasInternalScroll ? 'INTERNAL_SCROLL' : 'PAGE_SCROLL'}`);
+    log(`Scaled dimensions: ${scaledWidth}x${scaledTotalHeight}`);
 
-    // Load all images
+    // Load all images with their metadata
     log('Loading all captured images...');
     const images = [];
     for (let i = 0; i < captures.length; i++) {
       log(`Loading capture ${i + 1}/${captures.length}...`);
       const img = await loadImageFromDataUrl(captures[i].dataUrl);
+
+      // Get the bounding rect for this capture (varies in page scroll mode)
+      const rect = captures[i].boundingRect || elementBounds;
+
       images.push({
         img,
-        viewportHeight: captures[i].viewportHeight * devicePixelRatio,
-        viewportWidth: captures[i].viewportWidth * devicePixelRatio,
-        scrollY: captures[i].scrollY * devicePixelRatio,
+        viewportHeight: Math.round(captures[i].viewportHeight * devicePixelRatio),
+        viewportWidth: Math.round(captures[i].viewportWidth * devicePixelRatio),
+        scrollY: Math.round(captures[i].scrollY * devicePixelRatio),
+        // For page scroll mode, each capture may have different offsets
+        offsetX: Math.round((rect.x || elementBounds.offsetX) * devicePixelRatio),
+        offsetY: Math.round((rect.y || elementBounds.offsetY) * devicePixelRatio),
+        captureHeight: Math.round((rect.height || elementBounds.height) * devicePixelRatio),
         isLastCapture: captures[i].isLastCapture
       });
     }
 
-    // Calculate total stitched height
-    // First capture contributes full element height, subsequent captures overlap
-    let totalHeight = scaledHeight; // First capture is full element height
-
-    // Each subsequent capture overlaps by overlapHeight
-    const scaledOverlapHeight = overlapHeight * devicePixelRatio;
-    for (let i = 1; i < images.length; i++) {
-      const newHeight = scaledHeight - scaledOverlapHeight;
-      totalHeight += newHeight;
-    }
-
+    // Calculate output canvas size
     const outputWidth = sanitizeCanvasDimension(scaledWidth, 800);
-    const outputHeight = sanitizeCanvasDimension(totalHeight, 600);
+    const outputHeight = sanitizeCanvasDimension(scaledTotalHeight, 600);
 
     log(`Output canvas dimensions: ${outputWidth}x${outputHeight}`);
 
@@ -147,41 +145,70 @@ async function stitchElementCaptures(captures, elementBounds, overlapHeight) {
       throw new Error('Failed to get canvas context');
     }
 
-    // Draw cropped images with overlap handling
-    let currentY = 0;
+    // Draw strategy depends on scroll mode
+    let currentDestY = 0;
 
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
-
-      // Calculate how much of this image to draw
-      // For first capture: draw full element height from startY
-      // For subsequent: skip overlap pixels then draw remaining element height
       const isFirstCapture = i === 0;
-      const sourceY = isFirstCapture ? scaledOffsetY : scaledOffsetY + scaledOverlapHeight;
-      const drawHeight = isFirstCapture ? scaledHeight : scaledHeight - scaledOverlapHeight;
 
-      log(`Drawing image ${i + 1}: source rect (${scaledOffsetX}, ${sourceY}, ${scaledWidth}x${drawHeight}) to dest Y=${currentY}`);
+      // Source coordinates in the capture image
+      const srcX = Math.max(0, image.offsetX);
+      let srcY, srcHeight;
 
-      // Use overlap blending for overlapping regions (same as viewport stitching)
-      if (i > 0) {
-        // For overlapping region, draw with some opacity for smooth blending
+      if (hasInternalScroll) {
+        // Internal scroll: element stays in same position, content scrolls inside
+        // Each capture shows different content at the same viewport position
+        srcY = isFirstCapture ? image.offsetY : image.offsetY + scaledOverlapHeight;
+        srcHeight = isFirstCapture ? image.captureHeight : image.captureHeight - scaledOverlapHeight;
+      } else {
+        // Page scroll: element moves in viewport as page scrolls
+        // The visible portion of the element is at different Y positions
+        // For page scroll, offsetY might be negative (element partially above viewport)
+        // or positive (element below top of viewport)
+        srcY = Math.max(0, image.offsetY);
+        const visibleTop = Math.max(0, -image.offsetY); // How much of element is above viewport
+        const visibleBottom = Math.min(image.captureHeight, image.img.height - image.offsetY);
+        srcHeight = Math.min(image.captureHeight, image.img.height - srcY);
+
+        // Adjust for overlap on non-first captures
+        if (!isFirstCapture) {
+          srcY += scaledOverlapHeight;
+          srcHeight -= scaledOverlapHeight;
+        }
+      }
+
+      // Clamp source dimensions to image bounds
+      srcHeight = Math.min(srcHeight, image.img.height - srcY);
+      const srcWidth = Math.min(scaledWidth, image.img.width - srcX);
+
+      if (srcHeight <= 0 || srcWidth <= 0) {
+        log(`Capture ${i + 1}: Skipping - no visible content (srcHeight=${srcHeight}, srcWidth=${srcWidth})`);
+        continue;
+      }
+
+      log(`Drawing capture ${i + 1}: src(${srcX}, ${srcY}, ${srcWidth}x${srcHeight}) -> dest(0, ${currentDestY})`);
+
+      // Draw with overlap blending for non-first captures
+      if (!isFirstCapture && scaledOverlapHeight > 0) {
         ctx.globalAlpha = 0.5;
         ctx.drawImage(
           image.img,
-          scaledOffsetX, scaledOffsetY, scaledWidth, scaledOverlapHeight,
-          0, currentY, scaledWidth, scaledOverlapHeight
+          srcX, srcY - scaledOverlapHeight, srcWidth, scaledOverlapHeight,
+          0, currentDestY, srcWidth, scaledOverlapHeight
         );
         ctx.globalAlpha = 1.0;
+        currentDestY += scaledOverlapHeight;
       }
 
-      // Draw the main part of the cropped image
+      // Draw main content
       ctx.drawImage(
         image.img,
-        scaledOffsetX, sourceY, scaledWidth, drawHeight - (i > 0 ? scaledOverlapHeight : 0),
-        0, currentY + (i > 0 ? scaledOverlapHeight : 0), scaledWidth, drawHeight - (i > 0 ? scaledOverlapHeight : 0)
+        srcX, srcY, srcWidth, srcHeight,
+        0, currentDestY, srcWidth, srcHeight
       );
 
-      currentY += drawHeight;
+      currentDestY += srcHeight;
     }
 
     log('Element stitching complete, converting to PNG...');

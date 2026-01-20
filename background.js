@@ -359,51 +359,91 @@ async function elementCapture(tabId, elementInfo, sessionId) {
     const MAX_CAPTURES = 100;
     const MAX_TOTAL_HEIGHT = 32000;
 
+    // Determine capture strategy:
+    // 1. Element has internal scroll (scrollHeight > clientHeight) → scroll the element
+    // 2. Element is taller than viewport but no internal scroll → scroll the page
+    const hasInternalScroll = elementScrollHeight > elementClientHeight + 10;
+    const elementTotalHeight = hasInternalScroll ? elementScrollHeight : boundingRect.height;
+
+    // For page scroll, we need to know how much of the element is visible
+    // and calculate captures based on visible portions
+    const visibleHeight = Math.min(boundingRect.height, viewportHeight);
+    const captureHeight = hasInternalScroll ? elementClientHeight : visibleHeight;
+
+    log(`Capture strategy: ${hasInternalScroll ? 'ELEMENT_SCROLL' : 'PAGE_SCROLL'}`);
+    log(`Element total height: ${elementTotalHeight}, capture height per viewport: ${captureHeight}`);
+
     // Calculate number of captures needed
     let numCaptures = 1;
-    if (elementScrollHeight > elementClientHeight) {
-      const scrollableHeight = elementScrollHeight - elementClientHeight;
-      numCaptures = Math.ceil(scrollableHeight / (elementClientHeight - OVERLAP_HEIGHT)) + 1;
+    if (elementTotalHeight > captureHeight) {
+      numCaptures = Math.ceil((elementTotalHeight - OVERLAP_HEIGHT) / (captureHeight - OVERLAP_HEIGHT));
     }
 
     numCaptures = Math.min(numCaptures, MAX_CAPTURES);
-    log(`Will capture ${numCaptures} viewports (element height: ${elementScrollHeight}, viewport: ${elementClientHeight})`);
+    log(`Will capture ${numCaptures} viewports`);
 
-    if (elementScrollHeight > MAX_TOTAL_HEIGHT) {
-      log(`WARNING: Element height ${elementScrollHeight}px exceeds limit ${MAX_TOTAL_HEIGHT}px, may produce large file`);
+    if (elementTotalHeight > MAX_TOTAL_HEIGHT) {
+      log(`WARNING: Element height ${elementTotalHeight}px exceeds limit ${MAX_TOTAL_HEIGHT}px`);
     }
 
-    // Step 2: Capture each viewport within element bounds
+    // Get original page scroll position for restoration
+    const originalPageScroll = await chrome.tabs.sendMessage(tabId, {
+      type: 'SCROLL_CAPTURE_INIT'
+    });
+
+    // Step 2: Capture each viewport
     const captures = [];
 
     for (let i = 0; i < numCaptures; i++) {
-      const scrollY = i * (elementClientHeight - OVERLAP_HEIGHT);
-
-      // Don't scroll past the element's bottom
-      if (scrollY > elementScrollHeight - elementClientHeight) {
-        log(`Capture ${i + 1}: Would exceed element height, stopping`);
-        break;
-      }
-
-      log(`Capture ${i + 1}/${numCaptures}: Scrolling element to Y=${scrollY}`);
       const progress = Math.round((i / numCaptures) * 100);
-      updateCaptureState(sessionId, 'capturing', `Capturing element viewport ${i + 1}/${numCaptures}...`, progress);
+      updateCaptureState(sessionId, 'capturing', `Capturing viewport ${i + 1}/${numCaptures}...`, progress);
 
-      // Scroll element to position
-      const scrollResult = await chrome.tabs.sendMessage(tabId, {
-        type: 'ELEMENT_SCROLL_TO',
-        elementId: elementInfo.elementId,
-        scrollY
-      });
+      if (hasInternalScroll) {
+        // Scroll within the element
+        const scrollY = i * (captureHeight - OVERLAP_HEIGHT);
+        log(`Capture ${i + 1}/${numCaptures}: Scrolling element to Y=${scrollY}`);
 
-      if (!scrollResult.success) {
-        throw new Error(`Failed to scroll element to Y=${scrollY}`);
+        const scrollResult = await chrome.tabs.sendMessage(tabId, {
+          type: 'ELEMENT_SCROLL_TO',
+          scrollY
+        });
+
+        if (!scrollResult.success) {
+          throw new Error(`Failed to scroll element to Y=${scrollY}`);
+        }
+        log(`Capture ${i + 1}: Element scroll confirmed at Y=${scrollResult.scrolledToY}`);
+      } else {
+        // Scroll the page to reveal different parts of the element
+        // First, we need to scroll the element into view at the right position
+        const elementTopOnPage = dims.elementPageTop || 0;
+        const scrollY = elementTopOnPage + (i * (captureHeight - OVERLAP_HEIGHT));
+        log(`Capture ${i + 1}/${numCaptures}: Scrolling page to Y=${scrollY}`);
+
+        const scrollResult = await chrome.tabs.sendMessage(tabId, {
+          type: 'SCROLL_TO',
+          y: scrollY
+        });
+
+        if (!scrollResult.success) {
+          throw new Error(`Failed to scroll page to Y=${scrollY}`);
+        }
+        log(`Capture ${i + 1}: Page scroll confirmed at Y=${scrollResult.scrolledToY}`);
       }
-
-      log(`Capture ${i + 1}: Element scroll confirmed at Y=${scrollResult.scrolledToY}`);
 
       // Wait for content to render
       await new Promise(r => setTimeout(r, 600));
+
+      // Get updated element position after scroll (for page scroll mode)
+      let currentBoundingRect = boundingRect;
+      if (!hasInternalScroll) {
+        const updatedDims = await chrome.tabs.sendMessage(tabId, {
+          type: 'ELEMENT_CAPTURE_INIT'
+        });
+        if (updatedDims.success) {
+          currentBoundingRect = updatedDims.boundingRect;
+          log(`Capture ${i + 1}: Updated bounding rect:`, currentBoundingRect);
+        }
+      }
 
       // Capture visible tab with retry logic
       log(`Capture ${i + 1}: Taking screenshot...`);
@@ -432,10 +472,11 @@ async function elementCapture(tabId, elementInfo, sessionId) {
 
       captures.push({
         blob,
-        scrollY,
-        viewportHeight: elementClientHeight,
+        scrollY: i * (captureHeight - OVERLAP_HEIGHT),
+        viewportHeight: captureHeight,
         viewportWidth,
-        isLastCapture: scrollY + elementClientHeight >= elementScrollHeight
+        boundingRect: currentBoundingRect,
+        isLastCapture: i === numCaptures - 1
       });
 
       log(`Capture ${i + 1}: Stored (size: ${blob.size} bytes)`);
@@ -463,6 +504,7 @@ async function elementCapture(tabId, elementInfo, sessionId) {
         scrollY: captures[i].scrollY,
         viewportHeight: captures[i].viewportHeight,
         viewportWidth: captures[i].viewportWidth,
+        boundingRect: captures[i].boundingRect,
         isLastCapture: captures[i].isLastCapture
       });
     }
@@ -472,10 +514,11 @@ async function elementCapture(tabId, elementInfo, sessionId) {
 
     const elementBounds = {
       width: boundingRect.width,
-      height: boundingRect.height,
+      height: elementTotalHeight,
       offsetX: boundingRect.x,
       offsetY: boundingRect.y,
-      devicePixelRatio: devicePixelRatio
+      devicePixelRatio: devicePixelRatio,
+      hasInternalScroll: hasInternalScroll
     };
 
     log('Sending to offscreen with bounds:', elementBounds);
@@ -494,16 +537,22 @@ async function elementCapture(tabId, elementInfo, sessionId) {
 
     log('Element stitching complete, received:', stitchResult.pngBlobUrl);
 
-    // Step 5: Restore original element scroll position
-    log('Restoring original element scroll position...');
+    // Step 5: Restore original scroll positions
+    log('Restoring original scroll positions...');
     try {
+      if (hasInternalScroll) {
+        await chrome.tabs.sendMessage(tabId, {
+          type: 'ELEMENT_SCROLL_TO',
+          scrollY: originalElementScrollY
+        });
+      }
+      // Always restore page scroll
       await chrome.tabs.sendMessage(tabId, {
-        type: 'ELEMENT_SCROLL_TO',
-        elementId: elementInfo.elementId,
-        scrollY: originalElementScrollY
+        type: 'SCROLL_TO',
+        y: originalPageScroll.currentScrollY || 0
       });
     } catch (e) {
-      log('Warning: Could not restore element scroll position:', e);
+      log('Warning: Could not restore scroll position:', e);
     }
 
     return stitchResult;

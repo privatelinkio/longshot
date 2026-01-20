@@ -620,6 +620,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       const rect = selectedElement.getBoundingClientRect();
+      // Calculate element's position on the page (absolute, not viewport-relative)
+      const elementPageTop = rect.top + window.scrollY;
+      const elementPageLeft = rect.left + window.scrollX;
+
       const dims = {
         scrollHeight: selectedElement.scrollHeight,
         scrollWidth: selectedElement.scrollWidth,
@@ -630,6 +634,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         viewportHeight: window.innerHeight,
         viewportWidth: window.innerWidth,
         devicePixelRatio: window.devicePixelRatio || 1,
+        elementPageTop: elementPageTop,
+        elementPageLeft: elementPageLeft,
         boundingRect: {
           x: rect.left,
           y: rect.top,
