@@ -474,8 +474,11 @@ async function elementCapture(tabId, elementInfo, sessionId) {
       width: boundingRect.width,
       height: boundingRect.height,
       offsetX: boundingRect.x,
-      offsetY: boundingRect.y
+      offsetY: boundingRect.y,
+      devicePixelRatio: devicePixelRatio
     };
+
+    log('Sending to offscreen with bounds:', elementBounds);
 
     const stitchResult = await sendToOffscreen({
       type: 'STITCH_ELEMENT_CAPTURES',
@@ -868,7 +871,7 @@ chrome.commands.onCommand.addListener(async (command) => {
     });
   }
 
-  if (command === 'capture-region') {
+  if (command === 'capture-element') {
     // Check if capture is already in progress
     if (currentCaptureState &&
         currentCaptureState.status !== 'completed' &&

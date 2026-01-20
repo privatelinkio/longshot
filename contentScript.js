@@ -619,15 +619,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
       }
 
+      const rect = selectedElement.getBoundingClientRect();
       const dims = {
         scrollHeight: selectedElement.scrollHeight,
         scrollWidth: selectedElement.scrollWidth,
         clientHeight: selectedElement.clientHeight,
         clientWidth: selectedElement.clientWidth,
-        scrollTop: selectedElement.scrollTop,
-        scrollLeft: selectedElement.scrollLeft,
-        viewportOffsetX: selectedElement.getBoundingClientRect().left,
-        viewportOffsetY: selectedElement.getBoundingClientRect().top
+        currentScrollY: selectedElement.scrollTop,
+        currentScrollX: selectedElement.scrollLeft,
+        viewportHeight: window.innerHeight,
+        viewportWidth: window.innerWidth,
+        devicePixelRatio: window.devicePixelRatio || 1,
+        boundingRect: {
+          x: rect.left,
+          y: rect.top,
+          width: rect.width,
+          height: rect.height
+        }
       };
 
       log('Element capture init:', dims);
@@ -641,14 +649,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // ELEMENT_SCROLL_TO: Scroll element to position
   if (message.type === 'ELEMENT_SCROLL_TO') {
-    log(`Received ELEMENT_SCROLL_TO request: x=${message.x}, y=${message.y}`);
+    const scrollX = message.scrollX || message.x || 0;
+    const scrollY = message.scrollY || message.y || 0;
+    log(`Received ELEMENT_SCROLL_TO request: x=${scrollX}, y=${scrollY}`);
     try {
       if (!selectedElement) {
         sendResponse({ success: false, error: 'No element selected' });
         return true;
       }
 
-      selectedElement.scrollTo(message.x || 0, message.y || 0);
+      selectedElement.scrollTo(scrollX, scrollY);
 
       // Wait for scroll to settle
       setTimeout(() => {

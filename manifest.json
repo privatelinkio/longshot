@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Longshot",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Capture full-page screenshots using scroll-and-stitch method",
   "update_url": "https://langstons.github.io/longshot/updates.xml",
   "permissions": [
@@ -32,10 +32,10 @@
       },
       "description": "Capture full page screenshot"
     },
-    "capture-region": {
+    "capture-element": {
       "suggested_key": {
-        "default": "Ctrl+Shift+R",
-        "mac": "Command+Shift+R"
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
       },
       "description": "Capture selected element"
     }
