@@ -103,6 +103,9 @@ jobs:
           cp manifest.json background.js contentScript.js offscreen.html offscreen.js popup.html popup.js extension/
           cp -r icons extension/
 
+          # Add update_url to manifest for CRX auto-updates (not allowed in Chrome Web Store ZIP)
+          jq '. + {"update_url": "https://langstons.github.io/longshot/updates.xml"}' extension/manifest.json > extension/manifest.tmp && mv extension/manifest.tmp extension/manifest.json
+
           # Create CRX
           crx pack extension -p longshot.pem -o "longshot-${VERSION}.crx"
 
