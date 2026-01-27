@@ -3,7 +3,7 @@
  * Handles stitching captured viewport images into full-page PNG
  */
 
-const DEBUG = true;
+const DEBUG = false;
 
 function log(...args) {
   if (DEBUG) {

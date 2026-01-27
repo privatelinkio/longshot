@@ -3,7 +3,7 @@
  * Orchestrates page capture using scroll-and-stitch method
  */
 
-const DEBUG = true;
+const DEBUG = false;
 
 function log(...args) {
   if (DEBUG) console.log('[Background]', ...args);
@@ -987,7 +987,7 @@ function isCapturableUrl(url) {
  * Start page capture using scroll-and-stitch method
  */
 async function startCapture(config) {
-  const sessionId = Math.random().toString(36).substring(7);
+  const sessionId = crypto.randomUUID();
   log(`Starting capture session ${sessionId}`);
 
   try {
@@ -1143,7 +1143,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'ELEMENT_SELECTED') {
-    const sessionId = Math.random().toString(36).substring(7);
+    const sessionId = crypto.randomUUID();
     log(`Starting element capture session ${sessionId}`);
 
     (async () => {
@@ -1219,7 +1219,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Jira center-section capture
   if (message.type === 'START_JIRA_CENTER_CAPTURE') {
-    const sessionId = Math.random().toString(36).substring(7);
+    const sessionId = crypto.randomUUID();
     log(`Starting Jira center capture session ${sessionId}`);
 
     (async () => {
@@ -1384,7 +1384,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       }
 
       // Start Jira center capture
-      const sessionId = Math.random().toString(36).substring(7);
+      const sessionId = crypto.randomUUID();
       log(`Starting Jira center capture session ${sessionId} via hotkey`);
 
       activeSessions.set(sessionId, {

@@ -3,7 +3,7 @@
  * Handles DOM stabilization and scroll capture for full-page screenshots
  */
 
-const DEBUG = true;
+const DEBUG = false;
 
 function log(...args) {
   if (DEBUG) console.log('[ContentScript]', ...args);
