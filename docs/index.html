@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Privacy-focused full-page screenshot tool for Chrome. Capture entire web pages locally with no tracking or cloud uploads.">
+    <title>Longshot - Privacy-First Screenshot Capture for Chrome</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --text-dark: #2d3748;
+            --text-light: #718096;
+            --bg-light: #f7fafc;
+            --border: #e2e8f0;
+            --success: #48bb78;
+            --shadow: 0 10px 40px rgba(102, 126, 234, 0.15);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        nav .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+        }
+
+        nav .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text-dark);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero .privacy-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero .privacy-badge svg {
+            width: 18px;
+            height: 18px;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: var(--primary);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Section */
+        section {
+            padding: 5rem 2rem;
+        }
+
+        section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        section p.subtitle {
+            text-align: center;
+            font-size: 1.1rem;
+            color: var(--text-light);
+            max-width: 700px;
+            margin: 0 auto 3rem;
+        }
+
+        /* Privacy Section */
+        .privacy-section {
+            background: var(--bg-light);
+        }
+
+        .privacy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .privacy-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .privacy-card .icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .privacy-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .privacy-card p {
+            color: var(--text-light);
+        }
+
+        /* Features Section */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            padding: 2rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+            transform: translateY(-4px);
+        }
+
+        .feature-card .icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            color: var(--text-light);
+        }
+
+        /* Screenshots Section */
+        .screenshots {
+            background: var(--bg-light);
+        }
+
+        .screenshots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .screenshot-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .screenshot-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .screenshot-card .caption {
+            padding: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* Installation Section */
+        .installation {
+            background: white;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step {
+            text-align: center;
+        }
+
+        .step .number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .step h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .step p {
+            color: var(--text-light);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--text-dark);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        footer .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        footer .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        footer h4 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        footer ul {
+            list-style: none;
+        }
+
+        footer ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        footer a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        footer a:hover {
+            color: white;
+        }
+
+        footer .copyright {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 2rem;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            section h2 {
+                font-size: 2rem;
+            }
+
+            nav .nav-links {
+                gap: 1rem;
+            }
+
+            .screenshots-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <a href="#" class="logo">
+                <div class="logo-icon">L</div>
+                <span>Longshot</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#privacy">Privacy</a>
+                <a href="#install">Install</a>
+                <a href="https://github.com/privatelinkio/longshot" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="privacy-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+            </svg>
+            100% Privacy-Focused • Zero Tracking • Local Processing
+        </div>
+        <h1>Full-Page Screenshots,<br>No Privacy Compromises</h1>
+        <p>Capture beautiful full-page screenshots with advanced scroll-and-stitch technology. Everything processed locally on your device—no cloud uploads, no tracking, no accounts.</p>
+        <div class="cta-buttons">
+            <a href="https://chrome.google.com/webstore" class="btn btn-primary">Add to Chrome</a>
+            <a href="https://github.com/privatelinkio/longshot" class="btn btn-secondary">View on GitHub</a>
+        </div>
+    </section>
+
+    <!-- Privacy First Section -->
+    <section class="privacy-section" id="privacy">
+        <div class="container">
+            <h2>Privacy by Design</h2>
+            <p class="subtitle">Your screenshots stay on your device where they belong. We never see your data, track your usage, or send anything to external servers.</p>
+            <div class="privacy-grid">
+                <div class="privacy-card">
+                    <div class="icon">🔒</div>
+                    <h3>100% Local Processing</h3>
+                    <p>All screenshot capture and stitching happens in your browser. Zero external network requests.</p>
+                </div>
+                <div class="privacy-card">
+                    <div class="icon">🚫</div>
+                    <h3>No Tracking</h3>
+                    <p>No analytics, no telemetry, no usage tracking. We don't know who you are or what you capture.</p>
+                </div>
+                <div class="privacy-card">
+                    <div class="icon">☁️</div>
+                    <h3>No Cloud Uploads</h3>
+                    <p>Screenshots save directly to your computer. No accounts, no cloud storage, no third parties.</p>
+                </div>
+                <div class="privacy-card">
+                    <div class="icon">🔓</div>
+                    <h3>Open Source</h3>
+                    <p>Fully transparent codebase. Review, audit, and verify our privacy claims yourself.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features">
+        <div class="container">
+            <h2>Powerful Features</h2>
+            <p class="subtitle">Everything you need to capture web pages effectively, with privacy as the foundation.</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="icon">📄</div>
+                    <h3>Full-Page Capture</h3>
+                    <p>Automatically scrolls and stitches entire web pages seamlessly, no matter how long.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🎯</div>
+                    <h3>Element Capture</h3>
+                    <p>Select any element on the page to capture just that section. Perfect for specific components.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">⚡</div>
+                    <h3>Keyboard Shortcuts</h3>
+                    <p>Capture instantly with Cmd+Shift+S or Ctrl+Shift+S. Element mode with Cmd+Shift+E.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🏢</div>
+                    <h3>Jira-Optimized</h3>
+                    <p>Special mode for Jira users that captures only the center content area, excluding sidebars.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🧹</div>
+                    <h3>Clean Captures</h3>
+                    <p>Automatically hides sticky headers and fixed elements to prevent duplicates in stitched images.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📊</div>
+                    <h3>Progress Tracking</h3>
+                    <p>Real-time progress indicator shows capture status. Resume tracking even after closing popup.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🎨</div>
+                    <h3>Smart Filenames</h3>
+                    <p>Screenshots automatically save with descriptive names: PageTitle_hostname_timestamp.png</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📦</div>
+                    <h3>Content Expansion</h3>
+                    <p>Optional pre-capture mode that clicks "Show more" buttons and expands collapsed content.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section class="screenshots">
+        <div class="container">
+            <h2>See It In Action</h2>
+            <p class="subtitle">Beautiful, clean screenshots with an intuitive interface.</p>
+            <div class="screenshots-grid">
+                <div class="screenshot-card">
+                    <img src="images/screenshot-popup.png" alt="Longshot Extension Popup" onerror="this.style.display='none'">
+                    <div class="caption">Simple, Clean Interface</div>
+                </div>
+                <div class="screenshot-card">
+                    <img src="images/screenshot-capture.png" alt="Full Page Capture" onerror="this.style.display='none'">
+                    <div class="caption">Full-Page Capture in Action</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section class="installation" id="install">
+        <div class="container">
+            <h2>Get Started in Seconds</h2>
+            <p class="subtitle">Install Longshot and start capturing privacy-respecting screenshots immediately.</p>
+            <div class="steps">
+                <div class="step">
+                    <div class="number">1</div>
+                    <h3>Install Extension</h3>
+                    <p>Add Longshot to Chrome from the Chrome Web Store with one click.</p>
+                </div>
+                <div class="step">
+                    <div class="number">2</div>
+                    <h3>Navigate to Page</h3>
+                    <p>Go to any web page you want to capture.</p>
+                </div>
+                <div class="step">
+                    <div class="number">3</div>
+                    <h3>Click & Capture</h3>
+                    <p>Click the extension icon or use Cmd+Shift+S to capture.</p>
+                </div>
+                <div class="step">
+                    <div class="number">4</div>
+                    <h3>Download PNG</h3>
+                    <p>Your screenshot automatically downloads to your computer.</p>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 3rem;">
+                <a href="https://chrome.google.com/webstore" class="btn btn-primary" style="font-size: 1.1rem;">Install Longshot Now</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <h4>Longshot</h4>
+                    <p>Privacy-first full-page screenshot capture for Chrome.</p>
+                </div>
+                <div>
+                    <h4>Links</h4>
+                    <ul>
+                        <li><a href="https://chrome.google.com/webstore">Chrome Web Store</a></li>
+                        <li><a href="https://github.com/privatelinkio/longshot">GitHub Repository</a></li>
+                        <li><a href="https://github.com/privatelinkio/longshot/issues">Report a Bug</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Privacy</h4>
+                    <ul>
+                        <li><a href="#privacy">Privacy Guarantee</a></li>
+                        <li><a href="https://github.com/privatelinkio/longshot">View Source Code</a></li>
+                        <li><a href="#">No Data Collection</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">privatelinkio</a></li>
+                        <li><a href="#">Privacy-Focused Tools</a></li>
+                        <li><a href="#">Open Source</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2026 privatelinkio. Open source under MIT License. Version 1.3.6</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

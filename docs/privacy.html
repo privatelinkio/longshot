@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Longshot Screenshot Extension</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.8;
+            color: #2d3748;
+            background: #f7fafc;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            color: #2d3748;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #4a5568;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        ul {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .updated {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+
+        .highlight-box h3 {
+            color: white;
+            margin-top: 0;
+        }
+
+        .no-data {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        code {
+            background: #e2e8f0;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .container {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Privacy Policy</h1>
+        <p class="updated"><strong>Last Updated:</strong> January 28, 2026</p>
+
+        <div class="highlight-box">
+            <h3>🔒 Our Privacy Guarantee</h3>
+            <p><strong>Longshot does NOT collect, store, transmit, or share any of your data.</strong> Everything happens locally in your browser. We never see your screenshots, browsing activity, or personal information.</p>
+        </div>
+
+        <h2>Overview</h2>
+        <p>Longshot is a privacy-first Chrome extension designed to capture full-page screenshots of web pages. We built Longshot with a foundational commitment to user privacy, which means your data stays on your device where it belongs.</p>
+
+        <h2>Data Collection</h2>
+        <div class="no-data">
+            <strong>We collect ZERO data.</strong> Longshot operates entirely within your browser with no external communication.
+        </div>
+
+        <p>Specifically, we do NOT:</p>
+        <ul>
+            <li>❌ Collect or store your screenshots</li>
+            <li>❌ Track your browsing history</li>
+            <li>❌ Send analytics or telemetry data</li>
+            <li>❌ Upload anything to external servers</li>
+            <li>❌ Require user accounts or authentication</li>
+            <li>❌ Use cookies for tracking</li>
+            <li>❌ Share data with third parties</li>
+            <li>❌ Inject advertisements or tracking pixels</li>
+        </ul>
+
+        <h2>How Longshot Works</h2>
+        <p>Understanding how Longshot operates will help you see why your privacy is protected:</p>
+
+        <ol>
+            <li><strong>You trigger a capture:</strong> Click the extension icon or use a keyboard shortcut</li>
+            <li><strong>Local page analysis:</strong> Longshot reads the page dimensions in your browser</li>
+            <li><strong>Screenshot capture:</strong> Uses Chrome's built-in <code>captureVisibleTab</code> API to take screenshots</li>
+            <li><strong>Local stitching:</strong> Combines screenshots in an offscreen document in your browser</li>
+            <li><strong>Direct download:</strong> Saves the PNG file directly to your computer</li>
+        </ol>
+
+        <p><strong>Every step happens locally.</strong> No external servers are involved.</p>
+
+        <h2>Permissions Explained</h2>
+        <p>Longshot requests several Chrome permissions to function. Here's exactly what each permission is used for:</p>
+
+        <h3>activeTab</h3>
+        <p>Allows Longshot to capture the visible portion of the current browser tab when you click the extension icon or use a keyboard shortcut.</p>
+
+        <h3>tabs</h3>
+        <p>Enables Longshot to read the page title and URL to generate descriptive filenames for your screenshots (e.g., <code>PageTitle_hostname_timestamp.png</code>).</p>
+
+        <h3>downloads</h3>
+        <p>Permits Longshot to save the captured screenshot PNG file directly to your computer's download folder.</p>
+
+        <h3>scripting</h3>
+        <p>Allows Longshot to inject a content script into web pages to detect scroll positions and measure page dimensions needed for full-page capture.</p>
+
+        <h3>offscreen</h3>
+        <p>Enables creation of an offscreen document where multiple viewport captures are stitched together into a single full-page image using OffscreenCanvas.</p>
+
+        <h3>storage</h3>
+        <p>Stores your extension preferences (like whether to expand content before capture) locally in your browser's storage. This data never leaves your device.</p>
+
+        <h3>host_permissions (&lt;all_urls&gt;)</h3>
+        <p>Allows you to capture screenshots on any website you choose to visit. Longshot only accesses pages when you explicitly trigger a capture and performs all processing locally.</p>
+
+        <h2>Your Screenshots</h2>
+        <p>Screenshots you create with Longshot are:</p>
+        <ul>
+            <li>✅ Processed entirely in your browser</li>
+            <li>✅ Saved directly to your computer</li>
+            <li>✅ Never uploaded to any server</li>
+            <li>✅ Never seen by us or any third party</li>
+            <li>✅ Under your complete control</li>
+        </ul>
+
+        <h2>Third-Party Services</h2>
+        <p><strong>We use NO third-party services.</strong> Longshot does not integrate with:</p>
+        <ul>
+            <li>Analytics platforms (Google Analytics, etc.)</li>
+            <li>Cloud storage services</li>
+            <li>Advertising networks</li>
+            <li>Social media platforms</li>
+            <li>Error tracking services</li>
+            <li>Any external APIs or services</li>
+        </ul>
+
+        <h2>Open Source Transparency</h2>
+        <p>Longshot is fully open source, which means you can:</p>
+        <ul>
+            <li>Review the complete source code</li>
+            <li>Verify our privacy claims</li>
+            <li>Audit the extension yourself</li>
+            <li>Contribute improvements</li>
+            <li>Fork and modify for your needs</li>
+        </ul>
+        <p><strong>GitHub Repository:</strong> <a href="https://github.com/privatelinkio/longshot" target="_blank">github.com/privatelinkio/longshot</a></p>
+
+        <h2>Children's Privacy</h2>
+        <p>Longshot does not collect data from anyone, including children under 13. Since we collect no data at all, there are no age restrictions on using Longshot.</p>
+
+        <h2>International Users</h2>
+        <p>Longshot works the same way for all users worldwide. Since all processing is local and we collect no data, there are no regional differences in privacy protection. Your data stays on your device regardless of where you are located.</p>
+
+        <h2>Security</h2>
+        <p>While we don't collect data to secure, we take security seriously in the extension's design:</p>
+        <ul>
+            <li>All operations occur within Chrome's secure sandbox</li>
+            <li>No external network connections</li>
+            <li>No code obfuscation or hidden functionality</li>
+            <li>Regular security reviews of the codebase</li>
+            <li>Follows Chrome extension best practices</li>
+        </ul>
+
+        <h2>Changes to This Privacy Policy</h2>
+        <p>If we ever need to update this privacy policy, we will:</p>
+        <ul>
+            <li>Update the "Last Updated" date at the top</li>
+            <li>Notify users through the extension update notes</li>
+            <li>Maintain the same core privacy commitment</li>
+        </ul>
+        <p>We will never introduce data collection without explicit user consent and transparency.</p>
+
+        <h2>Your Rights</h2>
+        <p>Since we collect no data about you:</p>
+        <ul>
+            <li>There is no data to request</li>
+            <li>There is no data to delete</li>
+            <li>There is no data to export</li>
+            <li>There is no data to correct</li>
+        </ul>
+        <p>You have complete control over your screenshots as they're saved directly to your device.</p>
+
+        <h2>Contact Us</h2>
+        <p>If you have questions about this privacy policy or Longshot's privacy practices:</p>
+        <ul>
+            <li><strong>Email:</strong> privacy@privatelink.io</li>
+            <li><strong>GitHub Issues:</strong> <a href="https://github.com/privatelinkio/longshot/issues" target="_blank">Report a concern</a></li>
+            <li><strong>Website:</strong> <a href="https://privatelinkio.github.io/longshot/" target="_blank">privatelinkio.github.io/longshot</a></li>
+        </ul>
+
+        <h2>About privatelinkio</h2>
+        <p>Longshot is developed by privatelinkio, an organization committed to creating privacy-focused tools and extensions. We believe privacy is a fundamental right, not a feature to be compromised for convenience or profit.</p>
+
+        <div class="highlight-box" style="margin-top: 3rem;">
+            <h3>Our Commitment</h3>
+            <p>We will never compromise on privacy. If a feature requires data collection, we won't build it. Your trust is more valuable than any data we could collect.</p>
+        </div>
+
+        <a href="index.html" class="back-link">← Back to Longshot Home</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Longshot Screenshot Templates</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f0f0;
+            padding: 2rem;
+        }
+
+        .instructions {
+            max-width: 1280px;
+            margin: 0 auto 2rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .template-container {
+            max-width: 1280px;
+            margin: 2rem auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .template-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #2d3748;
+        }
+
+        .screenshot {
+            width: 1280px;
+            height: 800px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        /* Screenshot 1: Hero/Feature Showcase */
+        .screenshot-1 {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            position: relative;
+        }
+
+        .privacy-badge {
+            background: #667eea;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            color: #718096;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .feature-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .feature-text h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+            color: #2d3748;
+        }
+
+        .feature-text p {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        /* Screenshot 2: Interface */
+        .screenshot-2 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+        }
+
+        .popup-mockup {
+            width: 360px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+        }
+
+        .popup-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .popup-header h2 {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .popup-header p {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .popup-content {
+            padding: 1.5rem;
+        }
+
+        .popup-button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+        }
+
+        .popup-button.secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .popup-footer {
+            background: #f7fafc;
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .interface-annotations {
+            margin-left: 3rem;
+            color: white;
+        }
+
+        .annotation {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .annotation strong {
+            display: block;
+            font-size: 1.3rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Screenshot 3: Features Grid */
+        .screenshot-3 {
+            background: white;
+            padding: 4rem;
+        }
+
+        .features-title {
+            font-size: 3rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .features-grid-full {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-card-full {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .feature-card-full .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card-full h3 {
+            font-size: 1.1rem;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card-full p {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        /* Screenshot 4: Privacy Focus */
+        .screenshot-4 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 4rem;
+            color: white;
+        }
+
+        .privacy-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .privacy-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+
+        .privacy-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 12px;
+            color: #2d3748;
+        }
+
+        .privacy-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .privacy-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #667eea;
+        }
+
+        .privacy-card p {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        .download-button {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.75rem 2rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .download-button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h1>Longshot Screenshot Templates</h1>
+        <p><strong>Instructions:</strong> Right-click on each screenshot below and select "Save Image As..." or use browser screenshot tools to capture at exactly 1280x800px. You can also use these as reference designs to create your own in Figma, Canva, or Photoshop.</p>
+        <p><strong>Note:</strong> These are HTML mockups for reference. For final production quality, recreate these designs in a proper design tool with high-resolution graphics.</p>
+    </div>
+
+    <!-- Screenshot 1: Hero/Feature Showcase -->
+    <div class="template-container">
+        <h2 class="template-title">Screenshot 1: Hero/Feature Showcase (1280x800px)</h2>
+        <div class="screenshot screenshot-1">
+            <div class="privacy-badge">🔒 100% PRIVACY-FOCUSED • ZERO TRACKING • LOCAL PROCESSING</div>
+            <h1 class="hero-title">Full-Page Screenshots,<br>Simplified</h1>
+            <p class="hero-subtitle">Capture entire web pages with scroll-and-stitch technology.<br>Everything processed locally—no tracking, no cloud uploads.</p>
+            <div class="features-grid">
+                <div class="feature-box">
+                    <div class="feature-icon">🔒</div>
+                    <div class="feature-text">
+                        <h3>100% Local</h3>
+                        <p>All processing in your browser</p>
+                    </div>
+                </div>
+                <div class="feature-box">
+                    <div class="feature-icon">📄</div>
+                    <div class="feature-text">
+                        <h3>Full-Page Capture</h3>
+                        <p>Scroll and stitch automatically</p>
+                    </div>
+                </div>
+                <div class="feature-box">
+                    <div class="feature-icon">🎯</div>
+                    <div class="feature-text">
+                        <h3>Element Selection</h3>
+                        <p>Capture specific components</p>
+                    </div>
+                </div>
+                <div class="feature-box">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-text">
+                        <h3>Keyboard Shortcuts</h3>
+                        <p>Instant capture with hotkeys</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screenshot 2: Interface -->
+    <div class="template-container">
+        <h2 class="template-title">Screenshot 2: Extension Interface (1280x800px)</h2>
+        <div class="screenshot screenshot-2">
+            <div class="popup-mockup">
+                <div class="popup-header">
+                    <h2>Longshot</h2>
+                    <p>Full-page screenshot capture</p>
+                </div>
+                <div class="popup-content">
+                    <button class="popup-button">Capture Full Page</button>
+                    <button class="popup-button secondary">Capture Element</button>
+                    <button class="popup-button secondary">Capture Jira Center</button>
+                    <div style="margin-top: 1rem; text-align: center; font-size: 0.75rem; color: #718096;">
+                        <p><kbd style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">Cmd+Shift+S</kbd> Full Page</p>
+                        <p><kbd style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">Cmd+Shift+E</kbd> Element</p>
+                    </div>
+                </div>
+                <div class="popup-footer">
+                    Version 1.3.6
+                </div>
+            </div>
+            <div class="interface-annotations">
+                <div class="annotation">
+                    <strong>⚡ Three Capture Modes</strong>
+                    Full page, element, or Jira-optimized
+                </div>
+                <div class="annotation">
+                    <strong>⌨️ Keyboard Shortcuts</strong>
+                    Quick access with Cmd+Shift+S
+                </div>
+                <div class="annotation">
+                    <strong>📊 Progress Tracking</strong>
+                    See real-time capture status
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screenshot 3: Features Grid -->
+    <div class="template-container">
+        <h2 class="template-title">Screenshot 3: Features Grid (1280x800px)</h2>
+        <div class="screenshot screenshot-3">
+            <h2 class="features-title">Powerful Features, Privacy First</h2>
+            <div class="features-grid-full">
+                <div class="feature-card-full">
+                    <div class="icon">📄</div>
+                    <h3>Full-Page Capture</h3>
+                    <p>Automatically scrolls and stitches entire web pages</p>
+                </div>
+                <div class="feature-card-full">
+                    <div class="icon">🎯</div>
+                    <h3>Element Selection</h3>
+                    <p>Select and capture specific page elements</p>
+                </div>
+                <div class="feature-card-full">
+                    <div class="icon">🏢</div>
+                    <h3>Jira-Optimized</h3>
+                    <p>Capture center content without sidebars</p>
+                </div>
+                <div class="feature-card-full">
+                    <div class="icon">🧹</div>
+                    <h3>Clean Captures</h3>
+                    <p>Hides sticky headers automatically</p>
+                </div>
+                <div class="feature-card-full">
+                    <div class="icon">📊</div>
+                    <h3>Progress Tracking</h3>
+                    <p>Real-time capture status indicator</p>
+                </div>
+                <div class="feature-card-full">
+                    <div class="icon">⚡</div>
+                    <h3>Smart Filenames</h3>
+                    <p>Auto-generated descriptive names</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screenshot 4: Privacy Focus -->
+    <div class="template-container">
+        <h2 class="template-title">Screenshot 4: Privacy Focus (1280x800px)</h2>
+        <div class="screenshot screenshot-4">
+            <h2 class="privacy-title">🔒 Your Privacy Guaranteed</h2>
+            <div class="privacy-cards">
+                <div class="privacy-card">
+                    <div class="icon">🔒</div>
+                    <h3>100% Local Processing</h3>
+                    <p>All screenshot capture and stitching happens in your browser. No external servers, no cloud uploads. Your data stays on your device where it belongs.</p>
+                </div>
+                <div class="privacy-card">
+                    <div class="icon">🚫</div>
+                    <h3>Zero Tracking</h3>
+                    <p>No analytics, no telemetry, no usage tracking. We don't know who you are or what you capture. Your privacy is absolute.</p>
+                </div>
+                <div class="privacy-card">
+                    <div class="icon">☁️</div>
+                    <h3>No Cloud Uploads</h3>
+                    <p>Screenshots save directly to your computer. No accounts required, no third-party services, no data leaving your device.</p>
+                </div>
+                <div class="privacy-card">
+                    <div class="icon">🔓</div>
+                    <h3>Open Source</h3>
+                    <p>Fully transparent codebase on GitHub. Review, audit, and verify our privacy claims yourself. No hidden functionality.</p>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 2rem;">
+                <p style="font-size: 1.25rem; margin-bottom: 0.5rem;">Built by privatelinkio • Privacy-Focused Tools</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="instructions" style="margin-top: 2rem;">
+        <h2>Export Instructions</h2>
+        <p><strong>Method 1: Browser Screenshot</strong></p>
+        <ol>
+            <li>Open this page in Chrome or Firefox</li>
+            <li>Use browser DevTools to set viewport to exactly 1280x800</li>
+            <li>Take screenshot of each template</li>
+            <li>Save as PNG (24-bit)</li>
+        </ol>
+
+        <p style="margin-top: 1rem;"><strong>Method 2: Recreate in Design Tool (Recommended)</strong></p>
+        <ol>
+            <li>Open Figma, Canva, or Photoshop</li>
+            <li>Create 1280x800px artboard</li>
+            <li>Recreate these designs with high-quality assets</li>
+            <li>Export as PNG at 2x resolution for crisp display</li>
+        </ol>
+
+        <p style="margin-top: 1rem;"><strong>File Naming:</strong></p>
+        <ul>
+            <li>screenshot-1-hero-1280x800.png</li>
+            <li>screenshot-2-interface-1280x800.png</li>
+            <li>screenshot-3-features-1280x800.png</li>
+            <li>screenshot-4-privacy-1280x800.png</li>
+        </ul>
+    </div>
+</body>
+</html>
