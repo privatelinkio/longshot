@@ -61,8 +61,6 @@ jobs:
             offscreen.js \
             popup.html \
             popup.js \
-            options.html \
-            options.js \
             icons/ \
             -x "*.DS_Store"
           ls -la *.zip
@@ -114,7 +112,7 @@ jobs:
           # Create a temporary directory with extension files
           mkdir -p extension
           cp manifest.json extension/
-          cp background.js contentScript.js offscreen.html offscreen.js popup.html popup.js options.html options.js extension/
+          cp background.js contentScript.js offscreen.html offscreen.js popup.html popup.js extension/
           cp -r icons extension/
 
           # Add update_url to manifest for CRX auto-updates (not allowed in Chrome Web Store ZIP)
